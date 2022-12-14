@@ -1,6 +1,20 @@
 import Head from "next/head";
+import { Network, Alchemy } from 'alchemy-sdk';
+import { useState, useEffect } from "react";
+import useSWR from "swr";
+
+const settings = {
+  apiKey: process.env.NEXT_PUBLIC_ALCHEMY_GOERLI_KEY,
+  network: Network.ETH_GOERLI,
+};
+
+const alchemy = new Alchemy(settings);
+
+const getBlockNumber = () => alchemy.core.getBlockNumber().then((res) => res);
 
 export default function Home() {
+  const { data: latestBlock } = useSWR('latestBlock', getBlockNumber);
+
   return (
     <div>
       <Head>
@@ -17,7 +31,7 @@ export default function Home() {
         <div className="mx-auto max-w-7xl sm:px-6 lg:px-8">
           <div className="px-4 py-8 sm:px-0">
             <div className="h-96 rounded-lg border-4 border-dashed border-gray-200">
-              Latest blocks
+              { latestBlock ? latestBlock : "Loading..." }
             </div>
           </div>
         </div>
