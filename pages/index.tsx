@@ -1,5 +1,5 @@
 import Head from "next/head";
-import { Network, Alchemy } from 'alchemy-sdk';
+import { Network, Alchemy } from "alchemy-sdk";
 import { useState, useEffect } from "react";
 import useSWR from "swr";
 
@@ -10,10 +10,13 @@ const settings = {
 
 const alchemy = new Alchemy(settings);
 
-const getBlockNumber = () => alchemy.core.getBlockNumber().then((res) => res);
+const getLatestBlocks = () => {
+  return alchemy.core.getBlockNumber().then((res) => alchemy.core.getBlock(res));
+};
 
 export default function Home() {
-  const { data: latestBlock } = useSWR('latestBlock', getBlockNumber);
+  const { data: latestBlocks } = useSWR("latestBlocks", getLatestBlocks);
+  console.log(latestBlocks);
 
   return (
     <div>
@@ -30,9 +33,29 @@ export default function Home() {
       <main>
         <div className="mx-auto max-w-7xl sm:px-6 lg:px-8">
           <div className="px-4 py-8 sm:px-0">
-            <div className="h-96 rounded-lg border-4 border-dashed border-gray-200">
-              { latestBlock ? latestBlock : "Loading..." }
-            </div>
+              {/* {latestBlock ? latestBlock.hash : "Loading..."} */}
+              <div className="overflow-hidden shadow-sm ring-1 ring-black ring-opacity-5">
+                <table className="min-w-full divide-y divide-gray-300">
+                  <thead className="bg-gray-50">
+                    <tr>
+                      <th
+                        scope="col"
+                        className="py-3.5 pl-4 pr-3 text-left text-sm font-semibold text-gray-900 sm:pl-6 lg:pl-8"
+                      >
+                        Block
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-gray-200 bg-white">
+                    <tr>
+                      <td className="whitespace-nowrap py-4 pl-4 pr-3 text-sm font-medium text-gray-900 sm:pl-6 lg:pl-8">
+                        0010
+                      </td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+              {/* End */}
           </div>
         </div>
       </main>
