@@ -2,8 +2,7 @@ import { Disclosure } from "@headlessui/react"
 import { Bars3Icon, XMarkIcon } from "@heroicons/react/24/outline"
 
 const navigation = [
-  { name: 'Blocks', href: '#', current: true },
-  { name: 'Addresses', href: '#', current: false },
+  // { name: 'Blocks', href: '#', current: true },
 ]
 
 function classNames(...classes) {
@@ -44,7 +43,7 @@ export default function Layout({ children }) {
                 </div>
                 {/* Right menu items */}
                 <div className="hidden sm:ml-6 sm:flex sm:items-center">
-                  Sign in
+                  
                 </div>
                 {/* Mobile menu button */}
                 <div className="-mr-2 flex items-center sm:hidden">
