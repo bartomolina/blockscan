@@ -1,6 +1,7 @@
 import Head from "next/head";
 import useSWR from "swr";
 import { Network, Alchemy, Utils } from "alchemy-sdk";
+import { useState } from "react";
 
 const settings = {
   apiKey: process.env.NEXT_PUBLIC_ALCHEMY_GOERLI_KEY,
@@ -15,11 +16,6 @@ const getLatestBlocks = () =>
     .then((res) =>
       Promise.all(Array.from({ length: 20 }, (item, i) => alchemy.core.getBlock(res - i))).then((res) => res)
     );
-
-const getLatestTransactions = (block) => {
-  console.log("getting transactions for block: ", block);
-  return alchemy.core.getBlockWithTransactions(block[0]).then((res) => res.transactions);
-};
 
 const truncateRegex = /^(0x[a-zA-Z0-9]{4})[a-zA-Z0-9]+([a-zA-Z0-9]{4})$/;
 const truncateEthAddress = (address: string) => {
@@ -37,7 +33,7 @@ const DATE_UNITS = {
   second: 1,
 };
 
-const getTimeAgo = (timestamp) => {
+const getTimeAgo = (timestamp: number) => {
   const rtf = new Intl.RelativeTimeFormat();
 
   const secondsElapsed = Date.now() / 1000 - timestamp;
@@ -57,15 +53,19 @@ const getTimeAgo = (timestamp) => {
 
 export default function Home() {
   const { data: latestBlocks } = useSWR("latestBlocks", getLatestBlocks, { revalidateOnFocus: false });
-  const { data: latestTransactions, mutate } = useSWR(
-    latestBlocks ? [latestBlocks[0].hash, "latestTransactions"] : null,
-    getLatestTransactions,
-    { revalidateOnFocus: false }
-  );
+  const [transactions, setTransactions] = useState();
 
-  const handleBlockClick = (block) => {
-    getLatestTransactions(block)
+  if (!transactions && latestBlocks) {
+    console.log("updating transactions....")
+    alchemy.core.getBlockWithTransactions(latestBlocks[0].hash)
+      .then((res) => setTransactions(res.transactions));
   }
+
+  const handleBlockClick = (e: React.MouseEvent<HTMLHeadingElement>, block: string) => {
+    e.preventDefault();
+    alchemy.core.getBlockWithTransactions(block)
+      .then((res) => setTransactions(res.transactions));
+  };
 
   return (
     <div>
@@ -130,9 +130,7 @@ export default function Home() {
                                       className="text-blue-500 underline"
                                       href=""
                                       onClick={(e) => {
-                                        e.preventDefault();
-                                        console.log(block.hash);
-                                        mutate([block.hash, "latestTransactions"]);
+                                        handleBlockClick(e, block.hash);
                                       }}
                                     >
                                       {block.number}
@@ -191,7 +189,7 @@ export default function Home() {
                               </tr>
                             </thead>
                             <tbody className="divide-y divide-gray-200 bg-white">
-                              {latestTransactions?.map((transaction) => (
+                              {transactions?.map((transaction) => (
                                 <tr key={transaction.hash}>
                                   <td className="whitespace-nowrap py-4 pl-4 pr-3 text-sm font-medium text-gray-900 sm:pl-6 lg:pl-8">
                                     {truncateEthAddress(transaction.from)}
@@ -200,7 +198,7 @@ export default function Home() {
                                     {truncateEthAddress(transaction.to)}
                                   </td>
                                   <td className="whitespace-nowrap py-4 pl-4 pr-3 text-sm font-medium text-gray-900 sm:pl-6 lg:pl-8">
-                                    {/* {Utils.formatEther(transaction.value)} */"test"}
+                                    {Utils.formatEther(transaction.value)}
                                   </td>
                                 </tr>
                               ))}
