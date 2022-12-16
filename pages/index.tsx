@@ -1,7 +1,8 @@
 import Head from "next/head";
 import useSWR from "swr";
 import { Network, Alchemy, Utils } from "alchemy-sdk";
-import { useState } from "react";
+import { TransactionResponse } from "@ethersproject/abstract-provider";
+import { useState, MouseEvent } from "react";
 
 const settings = {
   apiKey: process.env.NEXT_PUBLIC_ALCHEMY_GOERLI_KEY,
@@ -10,12 +11,14 @@ const settings = {
 
 const alchemy = new Alchemy(settings);
 
-const getLatestBlocks = () =>
-  alchemy.core
+const getLatestBlocks = () => {
+  console.log("Updating blocks...");
+  return alchemy.core
     .getBlockNumber()
     .then((res) =>
       Promise.all(Array.from({ length: 20 }, (item, i) => alchemy.core.getBlock(res - i))).then((res) => res)
     );
+};
 
 const truncateRegex = /^(0x[a-zA-Z0-9]{4})[a-zA-Z0-9]+([a-zA-Z0-9]{4})$/;
 const truncateEthAddress = (address: string) => {
@@ -26,45 +29,42 @@ const truncateEthAddress = (address: string) => {
   }
 };
 
-const DATE_UNITS = {
-  day: 86400,
-  hour: 3600,
-  minute: 60,
-  second: 1,
-};
+const units: { unit: Intl.RelativeTimeFormatUnit; secondsInUnit: number }[] = [
+  { unit: "year", secondsInUnit: 31536000 },
+  { unit: "month", secondsInUnit: 2628000 },
+  { unit: "day", secondsInUnit: 86400 },
+  { unit: "hour", secondsInUnit: 3600 },
+  { unit: "minute", secondsInUnit: 60 },
+  { unit: "second", secondsInUnit: 1 },
+];
 
 const getTimeAgo = (timestamp: number) => {
   const rtf = new Intl.RelativeTimeFormat();
 
   const secondsElapsed = Date.now() / 1000 - timestamp;
-  let value = 0;
-  let unit = "second";
 
-  for (const [_unit, _secondsInUnit] of Object.entries(DATE_UNITS)) {
-    if (secondsElapsed >= _secondsInUnit || _unit === "second") {
-      value = Math.floor(secondsElapsed / _secondsInUnit) * -1;
-      unit = _unit;
-      break;
+  for (const { unit, secondsInUnit } of units) {
+    if (secondsElapsed >= secondsInUnit || unit === "second") {
+      return rtf.format(Math.floor(secondsElapsed / secondsInUnit) * -1, unit);
     }
   }
 
-  return rtf.format(value, unit);
+  return "";
 };
 
 export default function Home() {
   const { data: latestBlocks } = useSWR("latestBlocks", getLatestBlocks, { revalidateOnFocus: false });
-  const [transactions, setTransactions] = useState();
+  const [transactions, setTransactions] = useState<TransactionResponse[]>();
 
   if (!transactions && latestBlocks) {
-    console.log("updating transactions....")
-    alchemy.core.getBlockWithTransactions(latestBlocks[0].hash)
-      .then((res) => setTransactions(res.transactions));
+    console.log("Updating transactions...");
+    alchemy.core.getBlockWithTransactions(latestBlocks[0].hash).then((res) => setTransactions(res.transactions));
   }
 
-  const handleBlockClick = (e: React.MouseEvent<HTMLHeadingElement>, block: string) => {
+  const handleBlockClick = (e: MouseEvent, block: string) => {
+    console.log("Updating transactions...");
     e.preventDefault();
-    alchemy.core.getBlockWithTransactions(block)
-      .then((res) => setTransactions(res.transactions));
+    alchemy.core.getBlockWithTransactions(block).then((res) => setTransactions(res.transactions));
   };
 
   return (
@@ -195,7 +195,7 @@ export default function Home() {
                                     {truncateEthAddress(transaction.from)}
                                   </td>
                                   <td className="whitespace-nowrap py-4 pl-4 pr-3 text-sm font-medium text-gray-900 sm:pl-6 lg:pl-8">
-                                    {truncateEthAddress(transaction.to)}
+                                    {transaction.to ? truncateEthAddress(transaction.to) : ""}
                                   </td>
                                   <td className="whitespace-nowrap py-4 pl-4 pr-3 text-sm font-medium text-gray-900 sm:pl-6 lg:pl-8">
                                     {Utils.formatEther(transaction.value)}
